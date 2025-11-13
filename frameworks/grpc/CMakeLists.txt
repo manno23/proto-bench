@@ -1,6 +1,11 @@
 # gRPC implementation
-find_package(gRPC CONFIG REQUIRED)
-find_package(Protobuf CONFIG REQUIRED)
+if(GRPC_USE_PKG_CONFIG)
+  # Using pkg-config - variables are already set
+  message(STATUS "Using gRPC via pkg-config")
+else()
+  find_package(gRPC CONFIG REQUIRED)
+  find_package(Protobuf CONFIG REQUIRED)
+endif()
 
 # Generate protobuf and gRPC sources
 set(PROTO_FILES
@@ -8,12 +13,15 @@ set(PROTO_FILES
 )
 
 # Get protobuf and grpc plugin paths
-get_target_property(PROTOBUF_PROTOC protobuf::protoc IMPORTED_LOCATION_RELEASE)
+find_program(PROTOBUF_PROTOC protoc)
 if(NOT PROTOBUF_PROTOC)
-  get_target_property(PROTOBUF_PROTOC protobuf::protoc IMPORTED_LOCATION_DEBUG)
-endif()
-if(NOT PROTOBUF_PROTOC)
-  get_target_property(PROTOBUF_PROTOC protobuf::protoc IMPORTED_LOCATION)
+  get_target_property(PROTOBUF_PROTOC protobuf::protoc IMPORTED_LOCATION_RELEASE)
+  if(NOT PROTOBUF_PROTOC)
+    get_target_property(PROTOBUF_PROTOC protobuf::protoc IMPORTED_LOCATION_DEBUG)
+  endif()
+  if(NOT PROTOBUF_PROTOC)
+    get_target_property(PROTOBUF_PROTOC protobuf::protoc IMPORTED_LOCATION)
+  endif()
 endif()
 
 find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
@@ -51,15 +59,33 @@ target_include_directories(benchmark_grpc_proto
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-target_link_libraries(benchmark_grpc_proto
-  PUBLIC
-    gRPC::grpc++
-    protobuf::libprotobuf
-)
+if(GRPC_USE_PKG_CONFIG)
+  target_include_directories(benchmark_grpc_proto
+    PUBLIC
+      ${GRPC_INCLUDE_DIRS}
+      ${PROTOBUF_INCLUDE_DIRS}
+  )
+  target_link_libraries(benchmark_grpc_proto
+    PUBLIC
+      ${GRPC_LIBRARIES}
+      ${PROTOBUF_LIBRARIES}
+  )
+else()
+  target_link_libraries(benchmark_grpc_proto
+    PUBLIC
+      gRPC::grpc++
+      protobuf::libprotobuf
+  )
+endif()
 
 # gRPC client implementation
 add_library(benchmark_grpc_client
   client/grpc_client.cpp
+)
+
+target_include_directories(benchmark_grpc_client
+  PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/client
 )
 
 target_link_libraries(benchmark_grpc_client
@@ -73,8 +99,25 @@ add_library(benchmark_grpc_server
   server/grpc_server.cpp
 )
 
+target_include_directories(benchmark_grpc_server
+  PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/server
+)
+
 target_link_libraries(benchmark_grpc_server
   PUBLIC
     benchmark_common
     benchmark_grpc_proto
+    benchmark_grpc_client
+)
+
+# gRPC server executable
+add_executable(grpc_server
+  server/server_main.cpp
+)
+
+target_link_libraries(grpc_server
+  PRIVATE
+    benchmark_common
+    benchmark_grpc_server
 )

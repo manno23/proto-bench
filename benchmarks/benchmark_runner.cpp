@@ -23,18 +23,22 @@ namespace benchmark {
 namespace inprocess {
 extern std::unique_ptr<common::IFrameworkFactory> CreateInProcessFactory();
 }
+#ifdef HAS_GRPC
+namespace grpc_impl {
+extern std::unique_ptr<common::IFrameworkFactory> CreateGrpcFactory();
 }
-
-// TODO: Add framework factory registration when implementations are complete
-// #ifdef HAS_GRPC
-// extern std::unique_ptr<common::IFrameworkFactory> CreateGrpcFactory();
-// #endif
+#endif
 // #ifdef HAS_CAPNPROTO
+// namespace capnp_impl {
 // extern std::unique_ptr<common::IFrameworkFactory> CreateCapnProtoFactory();
+// }
 // #endif
 // #ifdef HAS_TRPC
+// namespace trpc_impl {
 // extern std::unique_ptr<common::IFrameworkFactory> CreateTrpcFactory();
+// }
 // #endif
+}
 
 void PrintUsage(const char* program_name) {
   std::cout << "Usage: " << program_name << " [options]\n"
@@ -120,20 +124,20 @@ int main(int argc, char* argv[]) {
     factories.push_back(benchmark::inprocess::CreateInProcessFactory());
   }
 
-  // TODO: Register RPC framework factories when implementations are complete
-  // #ifdef HAS_GRPC
-  //   if (framework == "grpc" || framework == "all") {
-  //     factories.push_back(CreateGrpcFactory());
-  //   }
-  // #endif
+  // Register RPC framework factories
+#ifdef HAS_GRPC
+  if (framework == "grpc" || framework == "all") {
+    factories.push_back(benchmark::grpc_impl::CreateGrpcFactory());
+  }
+#endif
   // #ifdef HAS_CAPNPROTO
   //   if (framework == "capnproto" || framework == "all") {
-  //     factories.push_back(CreateCapnProtoFactory());
+  //     factories.push_back(benchmark::capnp_impl::CreateCapnProtoFactory());
   //   }
   // #endif
   // #ifdef HAS_TRPC
   //   if (framework == "trpc" || framework == "all") {
-  //     factories.push_back(CreateTrpcFactory());
+  //     factories.push_back(benchmark::trpc_impl::CreateTrpcFactory());
   //   }
   // #endif
 
