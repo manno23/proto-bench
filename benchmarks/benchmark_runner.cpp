@@ -3,18 +3,26 @@
 
 #include "benchmark_scenario.h"
 #include "benchmark_service.h"
+#include "inprocess_framework.h"
 #include <iostream>
 #include <memory>
 #include <vector>
 #include <string>
 
-using namespace benchmark;
-
 // Forward declarations for scenario factory functions
+namespace benchmark {
 namespace scenarios {
 extern std::unique_ptr<BenchmarkScenario> CreateEchoBenchmark();
 extern std::unique_ptr<BenchmarkScenario> CreateThroughputBenchmark();
 extern std::unique_ptr<BenchmarkScenario> CreateReliabilityBenchmark();
+}
+}
+
+// Framework factory functions
+namespace benchmark {
+namespace inprocess {
+extern std::unique_ptr<common::IFrameworkFactory> CreateInProcessFactory();
+}
 }
 
 // TODO: Add framework factory registration when implementations are complete
@@ -31,14 +39,23 @@ extern std::unique_ptr<BenchmarkScenario> CreateReliabilityBenchmark();
 void PrintUsage(const char* program_name) {
   std::cout << "Usage: " << program_name << " [options]\n"
             << "\nOptions:\n"
-            << "  --framework <name>     Framework to benchmark (grpc|capnproto|trpc|all)\n"
+            << "  --framework <name>     Framework to benchmark\n"
+            << "                         Options: inprocess|grpc|capnproto|trpc|all\n"
+            << "                         (default: all)\n"
             << "  --scenario <name>      Scenario to run (echo|throughput|reliability|all)\n"
+            << "                         (default: echo)\n"
             << "  --duration <seconds>   Test duration (default: 10)\n"
             << "  --message-size <bytes> Message size (default: 1024)\n"
             << "  --address <addr>       Server address (default: localhost:50051)\n"
             << "  --output <file>        Output JSON results to file\n"
             << "  --verbose              Enable verbose output\n"
             << "  --help                 Show this help message\n"
+            << "\nAvailable Frameworks:\n"
+            << "  inprocess  - In-process reference implementation (no network)\n"
+            << "  grpc       - gRPC (requires gRPC installation)\n"
+            << "  capnproto  - Cap'n Proto (requires Cap'n Proto installation)\n"
+            << "  trpc       - tRPC-cpp (requires tRPC installation)\n"
+            << "  all        - Run all available frameworks\n"
             << std::endl;
 }
 
@@ -46,7 +63,7 @@ int main(int argc, char* argv[]) {
   std::cout << "proto-bench: RPC Framework Benchmark\n" << std::endl;
 
   // Parse command line arguments
-  scenarios::BenchmarkConfig config;
+  benchmark::scenarios::BenchmarkConfig config;
   std::string framework = "all";
   std::string scenario = "echo";
 
@@ -78,16 +95,16 @@ int main(int argc, char* argv[]) {
   }
 
   // Create benchmark scenarios
-  std::vector<std::unique_ptr<scenarios::BenchmarkScenario>> scenarios_list;
+  std::vector<std::unique_ptr<benchmark::scenarios::BenchmarkScenario>> scenarios_list;
 
   if (scenario == "echo" || scenario == "all") {
-    scenarios_list.push_back(scenarios::CreateEchoBenchmark());
+    scenarios_list.push_back(benchmark::scenarios::CreateEchoBenchmark());
   }
   if (scenario == "throughput" || scenario == "all") {
-    scenarios_list.push_back(scenarios::CreateThroughputBenchmark());
+    scenarios_list.push_back(benchmark::scenarios::CreateThroughputBenchmark());
   }
   if (scenario == "reliability" || scenario == "all") {
-    scenarios_list.push_back(scenarios::CreateReliabilityBenchmark());
+    scenarios_list.push_back(benchmark::scenarios::CreateReliabilityBenchmark());
   }
 
   if (scenarios_list.empty()) {
@@ -96,9 +113,14 @@ int main(int argc, char* argv[]) {
   }
 
   // Register available frameworks
-  std::vector<std::unique_ptr<common::IFrameworkFactory>> factories;
+  std::vector<std::unique_ptr<benchmark::common::IFrameworkFactory>> factories;
 
-  // TODO: Register factories when implementations are complete
+  // Always include in-process reference implementation
+  if (framework == "inprocess" || framework == "reference" || framework == "all") {
+    factories.push_back(benchmark::inprocess::CreateInProcessFactory());
+  }
+
+  // TODO: Register RPC framework factories when implementations are complete
   // #ifdef HAS_GRPC
   //   if (framework == "grpc" || framework == "all") {
   //     factories.push_back(CreateGrpcFactory());
@@ -116,8 +138,7 @@ int main(int argc, char* argv[]) {
   // #endif
 
   if (factories.empty()) {
-    std::cerr << "Error: No frameworks available. Framework implementations are not yet complete.\n"
-              << "Please implement the framework-specific client/server code." << std::endl;
+    std::cerr << "Error: No frameworks selected. Use --framework inprocess to run baseline tests." << std::endl;
     return 1;
   }
 
@@ -130,7 +151,7 @@ int main(int argc, char* argv[]) {
   std::cout << "  Server address: " << config.server_address << std::endl;
   std::cout << std::endl;
 
-  std::vector<scenarios::BenchmarkResults> all_results;
+  std::vector<benchmark::scenarios::BenchmarkResults> all_results;
 
   for (auto& factory : factories) {
     std::cout << "Testing framework: " << factory->GetName() << std::endl;

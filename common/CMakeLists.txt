@@ -1,6 +1,8 @@
 # Common library - framework-agnostic types and utilities
 add_library(benchmark_common
   src/benchmark_utils.cpp
+  src/reference_service.cpp
+  src/inprocess_framework.cpp
 )
 
 target_include_directories(benchmark_common
