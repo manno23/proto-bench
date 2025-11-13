@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package benchmark.trpc;
+
+// Service definition for benchmarking RPC frameworks with tRPC
+service BenchmarkService {
+  // Simple request/response for latency testing
+  rpc Echo(EchoRequest) returns (EchoResponse);
+
+  // Server streaming for throughput testing
+  rpc StreamData(StreamRequest) returns (stream DataChunk);
+
+  // Client streaming for upload throughput testing
+  rpc UploadData(stream DataChunk) returns (UploadResponse);
+
+  // Bidirectional streaming
+  rpc BidirectionalStream(stream DataChunk) returns (stream DataChunk);
+
+  // Batch processing for reliability testing
+  rpc BatchProcess(BatchRequest) returns (BatchResponse);
+}
+
+message EchoRequest {
+  string message = 1;
+  int64 timestamp = 2;
+  uint32 sequence_number = 3;
+}
+
+message EchoResponse {
+  string message = 1;
+  int64 client_timestamp = 2;
+  int64 server_timestamp = 3;
+  uint32 sequence_number = 4;
+}
+
+message StreamRequest {
+  uint32 chunk_size = 1;
+  uint32 chunk_count = 2;
+  uint32 delay_ms = 3;
+}
+
+message DataChunk {
+  uint32 sequence_number = 1;
+  bytes data = 2;
+  uint32 checksum = 3;
+  int64 timestamp = 4;
+}
+
+message UploadResponse {
+  uint64 total_bytes = 1;
+  uint32 chunk_count = 2;
+  int64 duration_ns = 3;
+  bool checksum_valid = 4;
+}
+
+message BatchRequest {
+  repeated BatchItem items = 1;
+  bool fail_on_error = 2;
+}
+
+message BatchItem {
+  string id = 1;
+  string operation = 2;
+  bytes data = 3;
+}
+
+message BatchResponse {
+  repeated BatchResult results = 1;
+  uint32 total_processed = 2;
+  uint32 total_failed = 3;
+}
+
+message BatchResult {
+  string id = 1;
+  bool success = 2;
+  string error_message = 3;
+  bytes result_data = 4;
+}

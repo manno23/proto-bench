@@ -2,3 +2,40 @@
 
 !.opencode/context
 !.opencode/assistant
+
+# Build directories
+build/
+cmake-build-*/
+
+# Generated files
+*.pb.cc
+*.pb.h
+*.grpc.pb.cc
+*.grpc.pb.h
+*.capnp.c++
+*.capnp.h
+*.trpc.pb.cc
+*.trpc.pb.h
+
+# Compiled binaries
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test results
+Testing/
+*.log
+
+# Benchmark results
+benchmarks/results/*.json
+benchmarks/results/*.csv
